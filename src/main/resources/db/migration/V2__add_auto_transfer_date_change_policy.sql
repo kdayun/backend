@@ -1,0 +1,33 @@
+INSERT INTO consultation_policy (
+    policy_code,
+    title,
+    intent,
+    customer_type,
+    product_type,
+    requires_identity_verification,
+    verified_content,
+    official_page_url,
+    source_name,
+    source_url,
+    effective_from,
+    effective_to,
+    verified_at,
+    verified_by,
+    verification_status
+) VALUES (
+    'AUTO_TRANSFER_DATE_CHANGE',
+    '계좌간 자동이체 이체일 변경',
+    'AUTO_TRANSFER_DATE_CHANGE',
+    'INDIVIDUAL',
+    'ACCOUNT_AUTO_TRANSFER',
+    TRUE,
+    '계좌간 자동이체 변경은 이체지정일 전 영업일까지 신청해야 합니다. 인터넷뱅킹, 스마트뱅킹, 텔레뱅킹, 자동이체 통합관리서비스 또는 서면 신청을 이용할 수 있습니다. 개인 인터넷뱅킹의 자동이체 변경 이용시간은 06:00~23:59이며 휴일에는 이용할 수 없습니다.',
+    'https://spib.wooribank.com/pib/Dream?basePage=PSTRS0018&nextPage=ps&withyou=CMCOM0001',
+    '우리은행 계좌간 자동이체약관 및 개인인터넷뱅킹 이용시간 안내',
+    'https://spot.wooribank.com/pot/Dream?withyou=CQIBG0024',
+    '2026-10-27',
+    NULL,
+    '2026-10-27',
+    'OFFICIAL_WOORI_WEB_RESEARCH',
+    'OFFICIAL_SOURCE_CHECKED'
+);

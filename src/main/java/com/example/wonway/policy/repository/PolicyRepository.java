@@ -8,11 +8,11 @@ import java.util.List;
 
 public interface PolicyRepository extends JpaRepository<ConsultationPolicy, Long> {
 
-    List<ConsultationPolicy> findByIntentIgnoreCaseAndCustomerTypeIgnoreCaseAndProductTypeIgnoreCaseAndRequiresIdentityVerificationAndVerificationStatus(
+    List<ConsultationPolicy> findByIntentIgnoreCaseAndCustomerTypeIgnoreCaseAndProductTypeIgnoreCaseAndRequiresIdentityVerificationAndVerificationStatusIn(
             String intent,
             String customerType,
             String productType,
             boolean requiresIdentityVerification,
-            VerificationStatus verificationStatus
+            List<VerificationStatus> verificationStatuses
     );
 }

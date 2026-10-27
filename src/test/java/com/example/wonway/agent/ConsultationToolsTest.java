@@ -57,17 +57,38 @@ class ConsultationToolsTest {
         ));
 
         tools.findApplicablePolicies(
-                new PolicySearchCondition("대출", "개인", "전세대출", true),
+                new PolicySearchCondition(
+                        "AUTO_TRANSFER_DATE_CHANGE",
+                        "INDIVIDUAL",
+                        "ACCOUNT_AUTO_TRANSFER",
+                        true,
+                        "AUTOMATIC",
+                        20,
+                        26
+                ),
                 context
         );
         tools.rankConsultationChannels(
-                new ChannelRankingCondition("대출", "개인", "전세대출", true, List.of(modelSupplied)),
+                new ChannelRankingCondition(
+                        "MODEL_VALUE",
+                        "MODEL_VALUE",
+                        "MODEL_VALUE",
+                        true,
+                        "MANUAL",
+                        1,
+                        2,
+                        List.of(modelSupplied)
+                ),
                 context
         );
 
         ArgumentCaptor<ChannelRankingCondition> captor = ArgumentCaptor.forClass(ChannelRankingCondition.class);
         verify(rankingService).rankChannels(captor.capture());
         assertThat(captor.getValue().policies()).containsExactly(verified);
+        assertThat(captor.getValue().intent()).isEqualTo("AUTO_TRANSFER_DATE_CHANGE");
+        assertThat(captor.getValue().transferMethod()).isEqualTo("AUTOMATIC");
+        assertThat(captor.getValue().currentTransferDay()).isEqualTo(20);
+        assertThat(captor.getValue().requestedTransferDay()).isEqualTo(26);
         assertThat(tools.consumeRecommendations(sessionId))
                 .extracting(ChannelRecommendation::channel)
                 .containsExactly(ChannelType.PHONE);

@@ -37,12 +37,12 @@ public class PolicyServiceImpl implements PolicyService {
 
         LocalDate today = LocalDate.now(clock);
         return policyRepository
-                .findByIntentIgnoreCaseAndCustomerTypeIgnoreCaseAndProductTypeIgnoreCaseAndRequiresIdentityVerificationAndVerificationStatus(
+                .findByIntentIgnoreCaseAndCustomerTypeIgnoreCaseAndProductTypeIgnoreCaseAndRequiresIdentityVerificationAndVerificationStatusIn(
                         condition.intent().trim(),
                         condition.customerType().trim(),
                         condition.productType().trim(),
                         condition.requiresIdentityVerification(),
-                        VerificationStatus.VERIFIED
+                        List.of(VerificationStatus.OFFICIAL_SOURCE_CHECKED, VerificationStatus.VERIFIED)
                 )
                 .stream()
                 .filter(policy -> policy.isEffectiveOn(today))
@@ -58,5 +58,25 @@ public class PolicyServiceImpl implements PolicyService {
                 || condition.requiresIdentityVerification() == null) {
             throw new IllegalArgumentException("정책 검색 조건이 완전하지 않습니다.");
         }
+
+        if ("AUTO_TRANSFER_DATE_CHANGE".equalsIgnoreCase(condition.intent())) {
+            validateAutoTransferDateChange(condition);
+        }
+    }
+
+    private void validateAutoTransferDateChange(PolicySearchCondition condition) {
+        if (!"AUTOMATIC".equalsIgnoreCase(condition.transferMethod())) {
+            throw new IllegalArgumentException("자동이체 변경 여부를 먼저 확인해야 합니다.");
+        }
+        if (!isValidDay(condition.currentTransferDay()) || !isValidDay(condition.requestedTransferDay())) {
+            throw new IllegalArgumentException("자동이체일은 1일부터 31일 사이여야 합니다.");
+        }
+        if (condition.currentTransferDay().equals(condition.requestedTransferDay())) {
+            throw new IllegalArgumentException("기존 이체일과 변경할 이체일이 같습니다.");
+        }
+    }
+
+    private boolean isValidDay(Integer day) {
+        return day != null && day >= 1 && day <= 31;
     }
 }

@@ -4,6 +4,9 @@ public record PolicySearchCondition(
         String intent,
         String customerType,
         String productType,
-        Boolean requiresIdentityVerification
+        Boolean requiresIdentityVerification,
+        String transferMethod,
+        Integer currentTransferDay,
+        Integer requestedTransferDay
 ) {
 }

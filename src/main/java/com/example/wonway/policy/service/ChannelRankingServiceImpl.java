@@ -13,10 +13,17 @@ import java.util.List;
 public class ChannelRankingServiceImpl implements ChannelRankingService {
 
     private static final String OFFICIAL_WOORI_URL = "https://www.wooribank.com";
+    private static final String AUTO_TRANSFER_WEB_URL =
+            "https://spib.wooribank.com/pib/Dream?basePage=PSTRS0018&nextPage=ps&withyou=CMCOM0001";
+    private static final String SERVICE_HOURS_URL =
+            "https://spot.wooribank.com/pot/Dream?withyou=CQIBG0024";
 
     @Override
     public List<ChannelRecommendation> rankChannels(ChannelRankingCondition condition) {
         if (condition == null || condition.policies().isEmpty()) {
+            return List.of();
+        }
+        if (!isAutoTransferDateChange(condition)) {
             return List.of();
         }
 
@@ -26,32 +33,41 @@ public class ChannelRankingServiceImpl implements ChannelRankingService {
         recommendations.add(recommend(
                 ChannelType.MOBILE_APP,
                 identityAvailable,
-                identityAvailable ? 90 : 0,
-                identityAvailable ? "앱에서 본인확인 후 비대면 처리가 가능합니다." : "본인확인 수단이 없어 앱 처리가 어렵습니다."
+                identityAvailable ? 100 : 0,
+                identityAvailable
+                        ? "스마트뱅킹에서 본인확인 후 자동이체 변경을 처리할 수 있어 이동 단계가 가장 적습니다."
+                        : "본인확인 수단이 없어 스마트뱅킹 처리가 어렵습니다.",
+                OFFICIAL_WOORI_URL
         ));
         recommendations.add(recommend(
                 ChannelType.WEBSITE,
                 identityAvailable,
-                identityAvailable ? 80 : 0,
-                identityAvailable ? "웹에서 본인확인 후 처리를 시도할 수 있습니다." : "본인확인 수단이 없어 웹 처리가 어렵습니다."
+                identityAvailable ? 85 : 0,
+                identityAvailable
+                        ? "개인 인터넷뱅킹의 자동이체조회/등록/변경 메뉴를 이용할 수 있습니다. 변경 이용시간은 06:00~23:59이며 휴일에는 이용할 수 없습니다."
+                        : "본인확인 수단이 없어 인터넷뱅킹 처리가 어렵습니다.",
+                AUTO_TRANSFER_WEB_URL
         ));
         recommendations.add(recommend(
                 ChannelType.PHONE,
                 true,
-                70,
-                "전화 상담을 통해 필요한 절차를 안내받을 수 있습니다."
+                65,
+                "텔레뱅킹 신청이 가능하며 고객센터 전화상담은 평일 09:00~18:00에 이용할 수 있습니다.",
+                SERVICE_HOURS_URL
         ));
         recommendations.add(recommend(
                 ChannelType.BRANCH,
                 true,
-                60,
-                "대면 확인이 필요하면 영업점에서 안내받을 수 있습니다."
+                50,
+                "비대면 본인확인이 어렵거나 자동이체 종류가 온라인 변경 대상이 아니면 영업점에서 서면으로 신청할 수 있습니다.",
+                OFFICIAL_WOORI_URL
         ));
         recommendations.add(recommend(
                 ChannelType.CHATBOT,
                 false,
                 0,
-                "챗봇은 검증된 정책 안내만 제공하며 실제 업무를 처리하지 않습니다."
+                "챗봇은 변경 조건과 경로만 안내하며 자동이체를 직접 변경하지 않습니다.",
+                OFFICIAL_WOORI_URL
         ));
 
         return recommendations.stream()
@@ -63,12 +79,29 @@ public class ChannelRankingServiceImpl implements ChannelRankingService {
             ChannelType channel,
             boolean processable,
             int score,
-            String reason
+            String reason,
+            String officialUrl
     ) {
-        return new ChannelRecommendation(channel, score, processable, List.of(reason), officialUrl(channel));
+        String deadlineReason = "변경은 기존 이체지정일 전 영업일까지 신청해야 합니다.";
+        return new ChannelRecommendation(
+                channel,
+                score,
+                processable,
+                List.of(reason, deadlineReason),
+                officialUrl
+        );
     }
 
-    private String officialUrl(ChannelType channel) {
-        return OFFICIAL_WOORI_URL;
+    private boolean isAutoTransferDateChange(ChannelRankingCondition condition) {
+        return "AUTO_TRANSFER_DATE_CHANGE".equalsIgnoreCase(condition.intent())
+                && "ACCOUNT_AUTO_TRANSFER".equalsIgnoreCase(condition.productType())
+                && "AUTOMATIC".equalsIgnoreCase(condition.transferMethod())
+                && isValidDay(condition.currentTransferDay())
+                && isValidDay(condition.requestedTransferDay())
+                && !condition.currentTransferDay().equals(condition.requestedTransferDay());
+    }
+
+    private boolean isValidDay(Integer day) {
+        return day != null && day >= 1 && day <= 31;
     }
 }

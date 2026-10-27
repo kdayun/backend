@@ -24,6 +24,7 @@ public class ConsultationTools {
     private final PolicyService policyService;
     private final ChannelRankingService channelRankingService;
     private final ConcurrentMap<String, List<PolicyResult>> verifiedPolicies = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, PolicySearchCondition> verifiedConditions = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, List<ChannelRecommendation>> verifiedRecommendations = new ConcurrentHashMap<>();
 
     public ConsultationTools(PolicyService policyService, ChannelRankingService channelRankingService) {
@@ -41,6 +42,7 @@ public class ConsultationTools {
     ) {
         String sessionId = sessionId(toolContext);
         List<PolicyResult> policies = List.copyOf(policyService.findApplicablePolicies(condition));
+        verifiedConditions.put(sessionId, condition);
         verifiedPolicies.put(sessionId, policies);
         return policies;
     }
@@ -55,16 +57,20 @@ public class ConsultationTools {
     ) {
         String sessionId = sessionId(toolContext);
         List<PolicyResult> policies = verifiedPolicies.getOrDefault(sessionId, List.of());
-        if (policies.isEmpty()) {
+        PolicySearchCondition verifiedSearchCondition = verifiedConditions.get(sessionId);
+        if (policies.isEmpty() || verifiedSearchCondition == null) {
             verifiedRecommendations.put(sessionId, List.of());
             return List.of();
         }
 
         ChannelRankingCondition verifiedCondition = new ChannelRankingCondition(
-                condition.intent(),
-                condition.customerType(),
-                condition.productType(),
+                verifiedSearchCondition.intent(),
+                verifiedSearchCondition.customerType(),
+                verifiedSearchCondition.productType(),
                 condition.identityVerificationAvailable(),
+                verifiedSearchCondition.transferMethod(),
+                verifiedSearchCondition.currentTransferDay(),
+                verifiedSearchCondition.requestedTransferDay(),
                 policies
         );
         List<ChannelRecommendation> recommendations = List.copyOf(
@@ -78,11 +84,13 @@ public class ConsultationTools {
         return verifiedRecommendations.getOrDefault(sessionId.toString(), List.of())
                 .stream()
                 .filter(ChannelRecommendation::processable)
+                .limit(3)
                 .toList();
     }
 
     public void clearInvocationState(UUID sessionId) {
         String key = sessionId.toString();
+        verifiedConditions.remove(key);
         verifiedPolicies.remove(key);
         verifiedRecommendations.remove(key);
     }

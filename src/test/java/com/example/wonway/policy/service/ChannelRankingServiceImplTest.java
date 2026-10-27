@@ -18,10 +18,13 @@ class ChannelRankingServiceImplTest {
     @Test
     void excludesDigitalProcessingWhenIdentityVerificationIsUnavailable() {
         ChannelRankingCondition condition = new ChannelRankingCondition(
-                "대출",
-                "개인",
-                "전세대출",
+                "AUTO_TRANSFER_DATE_CHANGE",
+                "INDIVIDUAL",
+                "ACCOUNT_AUTO_TRANSFER",
                 false,
+                "AUTOMATIC",
+                20,
+                26,
                 List.of(policy())
         );
 
@@ -41,10 +44,37 @@ class ChannelRankingServiceImplTest {
     @Test
     void returnsEmptyListWithoutVerifiedPolicies() {
         ChannelRankingCondition condition = new ChannelRankingCondition(
-                "대출", "개인", "전세대출", true, List.of()
+                "AUTO_TRANSFER_DATE_CHANGE",
+                "INDIVIDUAL",
+                "ACCOUNT_AUTO_TRANSFER",
+                true,
+                "AUTOMATIC",
+                20,
+                26,
+                List.of()
         );
 
         assertThat(service.rankChannels(condition)).isEmpty();
+    }
+
+    @Test
+    void ranksAppWebsiteAndPhoneAsTopThreeForScenario() {
+        ChannelRankingCondition condition = new ChannelRankingCondition(
+                "AUTO_TRANSFER_DATE_CHANGE",
+                "INDIVIDUAL",
+                "ACCOUNT_AUTO_TRANSFER",
+                true,
+                "AUTOMATIC",
+                20,
+                26,
+                List.of(policy())
+        );
+
+        assertThat(service.rankChannels(condition).stream()
+                .filter(ChannelRecommendation::processable)
+                .limit(3)
+                .map(ChannelRecommendation::channel))
+                .containsExactly(ChannelType.MOBILE_APP, ChannelType.WEBSITE, ChannelType.PHONE);
     }
 
     private PolicyResult policy() {

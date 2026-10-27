@@ -7,6 +7,9 @@ public record ChannelRankingCondition(
         String customerType,
         String productType,
         Boolean identityVerificationAvailable,
+        String transferMethod,
+        Integer currentTransferDay,
+        Integer requestedTransferDay,
         List<PolicyResult> policies
 ) {
     public ChannelRankingCondition {

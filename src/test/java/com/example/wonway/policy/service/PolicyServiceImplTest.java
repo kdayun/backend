@@ -16,6 +16,7 @@ import java.time.ZoneId;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -33,7 +34,9 @@ class PolicyServiceImplTest {
 
     @Test
     void returnsOnlyPoliciesEffectiveToday() {
-        PolicySearchCondition condition = new PolicySearchCondition("대출", "개인", "전세대출", true);
+        PolicySearchCondition condition = new PolicySearchCondition(
+                "대출", "개인", "전세대출", true, null, null, null
+        );
         ConsultationPolicy active = policy("ACTIVE", LocalDate.of(2026, 1, 1), null);
         ConsultationPolicy expired = policy(
                 "EXPIRED",
@@ -41,8 +44,12 @@ class PolicyServiceImplTest {
                 LocalDate.of(2025, 12, 31)
         );
         when(policyRepository
-                .findByIntentIgnoreCaseAndCustomerTypeIgnoreCaseAndProductTypeIgnoreCaseAndRequiresIdentityVerificationAndVerificationStatus(
-                        "대출", "개인", "전세대출", true, VerificationStatus.VERIFIED
+                .findByIntentIgnoreCaseAndCustomerTypeIgnoreCaseAndProductTypeIgnoreCaseAndRequiresIdentityVerificationAndVerificationStatusIn(
+                        "대출",
+                        "개인",
+                        "전세대출",
+                        true,
+                        List.of(VerificationStatus.OFFICIAL_SOURCE_CHECKED, VerificationStatus.VERIFIED)
                 ))
                 .thenReturn(List.of(active, expired));
 
@@ -53,14 +60,37 @@ class PolicyServiceImplTest {
 
     @Test
     void returnsEmptyListWhenRepositoryHasNoPolicy() {
-        PolicySearchCondition condition = new PolicySearchCondition("카드", "개인", "신용카드", false);
+        PolicySearchCondition condition = new PolicySearchCondition(
+                "카드", "개인", "신용카드", false, null, null, null
+        );
         when(policyRepository
-                .findByIntentIgnoreCaseAndCustomerTypeIgnoreCaseAndProductTypeIgnoreCaseAndRequiresIdentityVerificationAndVerificationStatus(
-                        "카드", "개인", "신용카드", false, VerificationStatus.VERIFIED
+                .findByIntentIgnoreCaseAndCustomerTypeIgnoreCaseAndProductTypeIgnoreCaseAndRequiresIdentityVerificationAndVerificationStatusIn(
+                        "카드",
+                        "개인",
+                        "신용카드",
+                        false,
+                        List.of(VerificationStatus.OFFICIAL_SOURCE_CHECKED, VerificationStatus.VERIFIED)
                 ))
                 .thenReturn(List.of());
 
         assertThat(policyService.findApplicablePolicies(condition)).isEmpty();
+    }
+
+    @Test
+    void rejectsManualTransferForAutoTransferScenario() {
+        PolicySearchCondition condition = new PolicySearchCondition(
+                "AUTO_TRANSFER_DATE_CHANGE",
+                "INDIVIDUAL",
+                "ACCOUNT_AUTO_TRANSFER",
+                true,
+                "MANUAL",
+                20,
+                26
+        );
+
+        assertThatThrownBy(() -> policyService.findApplicablePolicies(condition))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("자동이체 변경 여부");
     }
 
     private ConsultationPolicy policy(String code, LocalDate from, LocalDate to) {

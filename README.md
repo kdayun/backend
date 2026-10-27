@@ -83,6 +83,43 @@ DELETE /api/v1/consultations/{sessionId}
 
 상담 종료 시 해당 세션의 ChatMemory가 삭제됩니다. 상담 대화는 데이터베이스에 영구 저장하지 않습니다.
 
+## 테스트 시나리오: 자동이체 날짜 변경
+
+예시 요청:
+
+```text
+월급날이 바뀌어서 엄마 생활비 보내는 날을 20일에서 26일로 바꾸고 싶어요.
+```
+
+에이전트는 먼저 매달 자동으로 보내는 자동이체인지 직접 송금하는지 확인합니다. 자동이체라고 확인된 경우에만 다음 표준 조건으로 정책을 조회합니다.
+
+```text
+intent: AUTO_TRANSFER_DATE_CHANGE
+customerType: INDIVIDUAL
+productType: ACCOUNT_AUTO_TRANSFER
+transferMethod: AUTOMATIC
+currentTransferDay: 20
+requestedTransferDay: 26
+```
+
+추천 순위는 서버 코드에서 결정하며 모델이 임의로 바꿀 수 없습니다.
+
+| 순위 | 채널 | 점수 | 기준 |
+|---|---|---:|---|
+| 1 | 우리WON뱅킹 | 100 | 스마트뱅킹에서 본인확인 후 직접 변경 가능, 이동 단계 최소 |
+| 2 | 개인 인터넷뱅킹 | 85 | `자동이체조회/등록/변경` 메뉴 제공, 변경 이용시간 06:00~23:59 |
+| 3 | 텔레뱅킹·고객센터 | 65 | 텔레뱅킹 신청 가능, 전화상담은 평일 09:00~18:00 |
+
+본인확인이 불가능하면 모바일·인터넷 채널을 제외하고 영업점을 안전한 대안으로 안내합니다. 변경 신청은 기존 이체지정일 전 영업일까지 해야 합니다.
+
+현재 MVP 시나리오는 로그인한 사용자를 전제로 합니다. 운영 단계에서는 대화 내용이 아니라 프론트의 실제 인증 상태를 서버가 전달하도록 계약을 확장해야 합니다.
+
+정책 근거:
+
+- [우리은행 개인 인터넷뱅킹 이용시간](https://spot.wooribank.com/pot/Dream?withyou=CQIBG0024)
+- [우리은행 자동이체조회/등록/변경](https://spib.wooribank.com/pib/Dream?basePage=PSTRS0018&nextPage=ps&withyou=CMCOM0001)
+- [우리은행 계좌간 자동이체약관](https://spot.wooribank.com/pot/bbs?cmd=download&BOARD_ID=B00190&ARTICLE_ID=17102&ATTACH_ID=26783)
+
 ## 정책 데이터 주의사항
 
 Flyway는 정책 테이블 구조만 생성하며 실제 은행 정책은 자동으로 넣지 않습니다. 정책 데이터는 우리은행 공식 자료와 현업 검증을 거친 후 `VERIFIED` 상태로 등록해야 합니다. `SAMPLE` 데이터는 실제 추천 결과에 사용되지 않습니다.
